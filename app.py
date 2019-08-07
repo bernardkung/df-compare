@@ -19,19 +19,10 @@ from itertools import chain
 from sklearn import datasets, linear_model
 import statsmodels.api as sm
 
-## Version using request against json
-# endpoint_url = 'https://data.medicare.gov/resource/eqxu-aw4f.json'
-# request = requests.get(endpoint_url)
-# request_json = request.json()
-# fivestar = pd.DataFrame.from_dict(request_json)
 
-## Version using the sodapy package to query the soda API
-# Unauthenticated client only works with public data sets. Note 'None'
-# in place of application token, and no username or password:
-###client = Socrata("data.medicare.gov", None)
+## Version using the sodapy package to query the socrata data API
+# Unauthenticated client only works with public data sets. 
 # Requests made without an app_token will be subject to strict throttling limits.
-
-# Example authenticated client (needed for non-public datasets):
 client = Socrata('data.medicare.gov',
                  'UXvDXkqXFr9NqLO4q2A9cvoeP',
                 #  userame="user@example.com",
@@ -49,17 +40,6 @@ predictor_columns = ['standard_infection_ratio',
                      'fistula_rate_facility']
 
 fivestar[predictor_columns].astype('float', inplace=True)
-
-def generate_table(dataframe, max_rows=8):
-    return html.Table(
-        # Header
-        [html.Tr([html.Th(col) for col in dataframe.columns])] +
-
-        # Body
-        [html.Tr([
-            html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-        ]) for i in range(min(len(dataframe), max_rows))]
-    )
 
 def data_to_plotly(x):
     k = []
@@ -388,15 +368,17 @@ def update_graphs(selected_chains, selected_left, selected_right):
     # linreg_predictions = linreg_model.predict(data_to_plotly(ffs_corr_x)) # make the predictions by the model
 
     # summary is stored in three 'simpleTables'
-    # I'm going to take the first table,
-    # and convert it to a dictionary
+    # I'm going to take the first table, and convert it to a dictionary 
+    # since I only need specific packages.
+    # The simpleTable looks like a list of lists with whitespace formatting
+    # 1. completely unlist everything into flat list
+    # 2. strip white spaces, nulls, and colons
+    # 3. zip every two list items into a dictionary key-value pair
     linreg_summary0 = list(
         chain.from_iterable(linreg_model.summary().tables[0].data))
-    # cleans up strings by dropping white spaces, nulls, and colons
     linreg_summary0 = [x.strip().replace(":", "") 
         for x in linreg_summary0 if x.strip()!='']
     
-    # zip into dict using evens as keys, and odds as values
     linreg_summary = dict(zip(
         linreg_summary0[0::2], 
         linreg_summary0[1::2]))
@@ -416,9 +398,13 @@ def update_graphs(selected_chains, selected_left, selected_right):
                        'BIC',
                       ]
 
-    # add left and right selected features stats to output
     # need to return a list of dictionary and values, but have a dictionary and two nested lists
-    # the nested lists are chain unlisted inside the list
+    # the nested lists are chain unlisted into a single flat list first
+    # dictionary for graph data is then inserted
+    # linreg stats are then appended on
+    # could replace insert with append by moving output order in app.callback decorator
+
+    # add left and right selected features stats to output
     output_list = list(chain.from_iterable([
             ffs[[selected_left]].astype('float').describe()[selected_left].tolist(),
             ffs[[selected_right]].astype('float').describe()[selected_right].tolist(),
@@ -444,6 +430,7 @@ def update_graphs(selected_chains, selected_left, selected_right):
     Input('right-options', 'value'),
 ])
 def update_stat_titles(selected_left, selected_right):
+    '''Just passes selected options directly to title headers'''
     return selected_left, selected_right
 
 
