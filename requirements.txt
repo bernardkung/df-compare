@@ -9,3 +9,4 @@ dash_core_components==1.0.0
 dash_daq==0.1.7
 scikit_learn==0.21.3
 sodapy==1.5.4
+gunicorn==19.9.0
